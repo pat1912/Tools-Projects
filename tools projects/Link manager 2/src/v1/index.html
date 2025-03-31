@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Link Manager</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="link-manager.css">
+</head>
+<body>
+  <div id="app" class="app">
+    <header class="app-header">
+      <div class="header-left">
+        <h1 class="app-title">Link Manager</h1>
+        <div class="search-container" id="searchContainer">
+          <i class="fa fa-search search-icon"></i>
+          <input type="text" id="searchInput" placeholder="Search links..." class="search-input">
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <button class="header-action-button" id="addLinkBtn">
+          <i class="fa fa-plus"></i>
+          <span class="button-text">Add Link</span>
+        </button>
+        
+        <button class="header-action-button" id="addGroupBtn">
+          <i class="fa fa-folder-plus"></i>
+          <span class="button-text">Add Group</span>
+        </button>
+        
+        <button class="header-action-button icon-only" id="toggleViewBtn" title="Switch View">
+          <i class="fa fa-th-large"></i>
+        </button>
+        
+        <button class="header-action-button icon-only" id="toggleThemeBtn" title="Switch Theme">
+          <i class="fa fa-moon"></i>
+        </button>
+        
+        <div class="dropdown">
+          <button class="header-action-button icon-only" id="settingsBtn" title="More Options">
+            <i class="fa fa-cog"></i>
+          </button>
+          <div class="dropdown-content">
+            <button class="dropdown-item" id="exportBtn">
+              <i class="fa fa-download"></i>
+              <span>Export Links</span>
+            </button>
+            
+            <label class="dropdown-item">
+              <i class="fa fa-upload"></i>
+              <span>Import Links</span>
+              <input type="file" id="importInput" accept=".json" style="display: none;">
+            </label>
+          </div>
+        </div>
+      </div>
+    </header>
+    
+    <div class="app-container">
+      <div class="sidebar" id="sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-header" id="toggleGroupsHeader">
+            <i class="fa fa-chevron-down"></i>
+            <i class="fa fa-folder"></i>
+            <h2>Groups</h2>
+          </div>
+          
+          <ul class="sidebar-list" id="groupsList">
+            <li class="sidebar-item active" data-group-id="all">
+              <i class="fa fa-folder"></i>
+              <span>All Links</span>
+              <span class="item-count" id="allLinksCount">0</span>
+            </li>
+            <!-- Groups will be added here dynamically -->
+          </ul>
+        </div>
+        
+        <div class="sidebar-section">
+          <div class="sidebar-header" id="toggleTagsHeader">
+            <i class="fa fa-chevron-down"></i>
+            <i class="fa fa-tag"></i>
+            <h2>Tags</h2>
+          </div>
+          
+          <ul class="sidebar-list" id="tagsList">
+            <!-- Tags will be added here dynamically -->
+          </ul>
+        </div>
+      </div>
+      
+      <main class="main-content">
+        <div id="linkContainer"></div>
+      </main>
+    </div>
+  </div>
+  
+  <!-- Add Link Modal -->
+  <div id="addLinkModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Add New Link</h2>
+        <button class="modal-close" id="closeLinkModal">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <form id="addLinkForm" class="modal-form">
+        <div class="form-group">
+          <label for="linkUrl">URL *</label>
+          <div class="input-with-button">
+            <input type="text" id="linkUrl" placeholder="https://example.com" required>
+            <button type="button" id="fetchMetadataBtn" class="input-button">Fetch</button>
+          </div>
+          <div class="error-message" id="urlError"></div>
+        </div>
+        
+        <div class="form-group">
+          <label for="linkTitle">Title *</label>
+          <input type="text" id="linkTitle" placeholder="Link title" required>
+          <div class="error-message" id="titleError"></div>
+        </div>
+        
+        <div class="form-group">
+          <label for="linkGroup">Group *</label>
+          <select id="linkGroup" required>
+            <option value="">Select a group</option>
+            <!-- Groups will be added here dynamically -->
+          </select>
+          <div class="error-message" id="groupError"></div>
+        </div>
+        
+        <div class="form-group">
+          <label for="linkRemarks">Notes</label>
+          <textarea id="linkRemarks" placeholder="Add your notes about this link" rows="3"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="linkTags">Tags</label>
+          <div class="tags-input-container">
+            <div class="tags-display" id="tagsDisplay"></div>
+            <div class="tags-input-wrapper">
+              <input type="text" id="linkTags" placeholder="Add tags (separate with Enter or comma)">
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" class="button secondary" id="cancelLinkBtn">Cancel</button>
+          <button type="submit" class="button primary">Add Link</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Edit Link Modal -->
+  <div id="editLinkModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Edit Link</h2>
+        <button class="modal-close" id="closeEditModal">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <form id="editLinkForm" class="modal-form">
+        <input type="hidden" id="editLinkId">
+        
+        <div class="form-group">
+          <label for="editLinkUrl">URL *</label>
+          <input type="text" id="editLinkUrl" placeholder="https://example.com" required>
+          <div class="error-message" id="editUrlError"></div>
+        </div>
+        
+        <div class="form-group">
+          <label for="editLinkTitle">Title *</label>
+          <input type="text" id="editLinkTitle" placeholder="Link title" required>
+          <div class="error-message" id="editTitleError"></div>
+        </div>
+        
+        <div class="form-group">
+          <label for="editLinkGroup">Group *</label>
+          <select id="editLinkGroup" required>
+            <option value="">Select a group</option>
+            <!-- Groups will be added here dynamically -->
+          </select>
+          <div class="error-message" id="editGroupError"></div>
+        </div>
+        
+        <div class="form-group">
+          <label for="editLinkRemarks">Notes</label>
+          <textarea id="editLinkRemarks" placeholder="Add your notes about this link" rows="3"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="editLinkTags">Tags</label>
+          <div class="tags-input-container">
+            <div class="tags-display" id="editTagsDisplay"></div>
+            <div class="tags-input-wrapper">
+              <input type="text" id="editLinkTags" placeholder="Add tags (separate with Enter or comma)">
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" class="button secondary" id="cancelEditBtn">Cancel</button>
+          <button type="submit" class="button primary">Update Link</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Add Group Modal -->
+  <div id="addGroupModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Add New Group</h2>
+        <button class="modal-close" id="closeGroupModal">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <form id="addGroupForm" class="modal-form">
+        <div class="form-group">
+          <label for="groupName">Group Name *</label>
+          <input type="text" id="groupName" placeholder="Enter group name" required>
+          <div class="error-message" id="groupNameError"></div>
+        </div>
+        
+        <div class="form-group">
+          <label for="groupColor">Group Color</label>
+          <div class="color-picker-container">
+            <input type="color" id="groupColor" class="color-picker" value="#4285F4">
+            <div class="color-preview" id="colorPreview" style="background-color: #4285F4;"></div>
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" class="button secondary" id="cancelGroupBtn">Cancel</button>
+          <button type="submit" class="button primary">Add Group</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Link Preview Modal -->
+  <div id="linkPreviewModal" class="preview-overlay" style="display: none;">
+    <div class="preview-modal">
+      <div class="preview-header">
+        <h2>Link Preview</h2>
+        <button class="preview-close" id="closePreviewModal">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="preview-content" id="previewContent">
+        <!-- Preview content will be added here dynamically -->
+      </div>
+      
+      <div class="preview-footer">
+        <a href="#" id="previewLink" target="_blank" rel="noopener noreferrer" class="preview-button primary">
+          Visit Link
+        </a>
+        <button id="closePreviewBtn" class="preview-button">Close</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="core.js"></script>
+  <script src="events.js"></script>
+  <script src="tags.js"></script>
+  <script src="links.js"></script>
+  <script src="modals.js"></script>
+  <script src="health-import.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

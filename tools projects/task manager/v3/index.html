@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Task Manager</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-top: 0;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .input-container {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        
+        .input-container input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .input-container button {
+            padding: 10px 20px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        .input-container button:hover {
+            background-color: #45a049;
+        }
+        
+        .input-container select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            min-width: 150px;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        
+        .tab.active {
+            background-color: #4caf50;
+            color: white;
+        }
+        
+        .tab:hover:not(.active) {
+            background-color: #f2f2f2;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .filter-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .filter-container label {
+            font-weight: bold;
+        }
+        
+        .filter-container select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .task-grid {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .task-grid th {
+            background-color: #f2f2f2;
+            text-align: left;
+            padding: 12px;
+        }
+        
+        .task-grid td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .task-grid tr:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .task-completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        
+        .btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        
+        .btn-complete {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .btn-edit {
+            background-color: #FFC107;
+            color: black;
+        }
+        
+        .btn-delete {
+            background-color: #F44336;
+            color: white;
+        }
+        
+        .btn-notes {
+            background-color: #9C27B0;
+            color: white;
+        }
+        
+        .btn-defer {
+            background-color: #FF9800;
+            color: white;
+        }
+        
+        .btn-color {
+            background-color: #607D8B;
+            color: white;
+        }
+        
+        .btn-complete:hover { background-color: #0b7dda; }
+        .btn-edit:hover { background-color: #e0a800; }
+        .btn-delete:hover { background-color: #da190b; }
+        .btn-notes:hover { background-color: #7B1FA2; }
+        .btn-defer:hover { background-color: #e68a00; }
+        .btn-color:hover { background-color: #455A64; }
+        .btn-report { background-color: #009688; color: white; }
+        .btn-report:hover { background-color: #00796b; }
+        
+        .empty-message {
+            text-align: center;
+            color: #888;
+            padding: 20px;
+            font-style: italic;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .close-button {
+            cursor: pointer;
+            font-size: 24px;
+            font-weight: bold;
+            color: #888;
+        }
+        
+        .modal-body {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 10px;
+        }
+        
+        .modal-body input, .modal-body textarea, .modal-body select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        
+        .modal-body textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .modal-footer button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .save-button {
+            background-color: #4caf50;
+            color: white;
+        }
+        
+        .save-button:hover {
+            background-color: #45a049;
+        }
+        
+        .danger-button {
+            background-color: #F44336;
+            color: white;
+        }
+        
+        .danger-button:hover {
+            background-color: #d32f2f;
+        }
+        
+        .cancel-button {
+            background-color: #f2f2f2;
+            color: #333;
+        }
+        
+        .cancel-button:hover {
+            background-color: #ddd;
+        }
+        
+        .defer-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .defer-options button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #f2f2f2;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .defer-options button:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .color-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .color-option.selected {
+            border-color: #333;
+        }
+        
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+        
+        .notes-list {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            margin-bottom: 15px;
+        }
+        
+        .note-item {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .note-date {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .note-delete-btn {
+            padding: 2px 5px;
+            font-size: 12px;
+        }
+        
+        .note-text {
+            white-space: pre-wrap;
+        }
+        
+        .tab-badge {
+            display: inline-block;
+            background-color: #F44336;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            line-height: 20px;
+            text-align: center;
+            margin-left: 5px;
+        }
+        
+        .category-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-right: 8px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .categories-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .category-item:last-child {
+            border-bottom: none;
+        }
+        
+        .category-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        
+        .category-name {
+            flex-grow: 1;
+        }
+        
+        .category-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .add-category-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .add-category-form input {
+            flex-grow: 1;
+        }
+        
+        .color-preview {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-block;
+            cursor: pointer;
+            border: 2px solid #ddd;
+        }
+        
+        [dir="rtl"] .action-buttons {
+            justify-content: flex-start;
+        }
+        
+        [dir="rtl"] .tab {
+            margin-right: 0;
+            margin-left: 5px;
+        }
+        
+        [dir="rtl"] .tab-badge {
+            margin-left: 0;
+            margin-right: 5px;
+        }
+        
+        [dir="rtl"] .category-badge {
+            margin-right: 0;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Advanced Task Manager</h1>
+        
+        <div class="input-container">
+            <input type="text" id="taskInput" placeholder="Add a new task...">
+            <select id="categorySelect">
+                <option value="">No Category</option>
+                <!-- Categories will be added here by JavaScript -->
+            </select>
+            <button id="addTaskButton">Add Task</button>
+            <button id="importExportButton" style="background-color: #607D8B;">Import/Export</button>
+            <button id="manageCategoriesButton" style="background-color: #795548;">Categories</button>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="active">Active Tasks <span id="activeBadge" class="tab-badge" style="display: none;">0</span></div>
+            <div class="tab" data-tab="deferred">Deferred Tasks <span id="deferredBadge" class="tab-badge" style="display: none;">0</span></div>
+            <div class="tab" data-tab="completed">Completed Tasks <span id="completedBadge" class="tab-badge" style="display: none;">0</span></div>
+        </div>
+        
+        <div id="activeTasksTab" class="tab-content active">
+            <div class="filter-container">
+                <label for="activeFilterCategory">Filter by Category:</label>
+                <select id="activeFilterCategory">
+                    <option value="">All Categories</option>
+                    <!-- Categories will be added here by JavaScript -->
+                </select>
+            </div>
+            <table class="task-grid">
+                <thead>
+                    <tr>
+                        <th style="width: 45%">Task</th>
+                        <th style="width: 20%">Date Added</th>
+                        <th style="width: 35%">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="activeTaskList">
+                    <!-- Tasks will be added here by JavaScript -->
+                </tbody>
+            </table>
+            <div id="activeEmptyMessage" class="empty-message">No active tasks. Add a task to get started!</div>
+        </div>
+        
+        <div id="deferredTasksTab" class="tab-content">
+            <div class="filter-container">
+                <label for="deferredFilterCategory">Filter by Category:</label>
+                <select id="deferredFilterCategory">
+                    <option value="">All Categories</option>
+                    <!-- Categories will be added here by JavaScript -->
+                </select>
+            </div>
+            <table class="task-grid">
+                <thead>
+                    <tr>
+                        <th style="width: 45%">Task</th>
+                        <th style="width: 20%">Due Date</th>
+                        <th style="width: 35%">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="deferredTaskList">
+                    <!-- Deferred tasks will be added here -->
+                </tbody>
+            </table>
+            <div id="deferredEmptyMessage" class="empty-message">No deferred tasks.</div>
+        </div>
+        
+        <div id="completedTasksTab" class="tab-content">
+            <div class="filter-container">
+                <label for="completedFilterCategory">Filter by Category:</label>
+                <select id="completedFilterCategory">
+                    <option value="">All Categories</option>
+                    <!-- Categories will be added here by JavaScript -->
+                </select>
+                <button id="deleteAllCompletedBtn" class="btn btn-delete" style="padding: 8px 15px;">Delete All Completed Tasks</button>
+            </div>
+            <table class="task-grid">
+                <thead>
+                    <tr>
+                        <th style="width: 50%">Task</th>
+                        <th style="width: 25%">Completed On</th>
+                        <th style="width: 25%">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="completedTaskList">
+                    <!-- Completed tasks will be added here -->
+                </tbody>
+            </table>
+            <div id="completedEmptyMessage" class="empty-message">No completed tasks.</div>
+        </div>
+    </div>
+    
+    <!-- Manage Categories Modal -->
+    <div id="categoriesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Categories</h2>
+                <span class="close-button" id="closeCategoriesModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="add-category-form">
+                    <input type="text" id="newCategoryInput" placeholder="New category name...">
+                    <div class="color-preview" id="categoryColorPreview" style="background-color: #4caf50;"></div>
+                    <button id="addCategoryBtn" class="btn" style="background-color: #4caf50; color: white;">Add</button>
+                </div>
+                
+                <div class="categories-list" id="categoriesList">
+                    <!-- Categories will be added here by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-button" id="closeCategories">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Task</h2>
+                <span class="close-button" id="closeEditModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="editTaskInput">
+                <select id="editCategorySelect">
+                    <option value="">No Category</option>
+                    <!-- Categories will be added here by JavaScript -->
+                </select>
+                <input type="hidden" id="editTaskId">
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-button" id="cancelEdit">Cancel</button>
+                <button class="save-button" id="saveEdit">Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notes Modal -->
+    <div id="notesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Task Notes</h2>
+                <span class="close-button" id="closeNotesModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="taskDescription" style="margin-bottom: 20px; font-weight: bold;"></div>
+                <div class="notes-list" id="notesList" style="flex: 1; overflow-y: auto; margin-bottom: 15px;"></div>
+                <div style="border-top: 1px solid #eee; padding-top: 10px;">
+                    <textarea id="newNoteInput" placeholder="Add a new note..."></textarea>
+                    <input type="hidden" id="notesTaskId">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-button" id="closeNotes">Close</button>
+                <button class="save-button" id="addNote">Add Note</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Defer Task Modal -->
+    <div id="deferModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Defer Task</h2>
+                <span class="close-button" id="closeDeferModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="deferTaskDescription" style="margin-bottom: 20px; font-weight: bold;"></div>
+                <div class="defer-options">
+                    <button id="deferTomorrow">Tomorrow</button>
+                    <button id="deferNextWeek">Next Week</button>
+                </div>
+                <label for="deferDate">Or select specific date:</label>
+                <input type="date" id="deferDate">
+                <input type="hidden" id="deferTaskId">
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-button" id="cancelDefer">Cancel</button>
+                <button class="save-button" id="saveDefer">Defer Task</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Color Task Modal -->
+    <div id="colorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Task Color</h2>
+                <span class="close-button" id="closeColorModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="colorTaskDescription" style="margin-bottom: 20px; font-weight: bold;"></div>
+                <div class="color-options">
+                    <div class="color-option" data-color="" style="background-color: transparent; border: 2px dashed #ccc;" title="No color"></div>
+                    <div class="color-option" data-color="#FFCDD2" style="background-color: #FFCDD2;" title="Red"></div>
+                    <div class="color-option" data-color="#C8E6C9" style="background-color: #C8E6C9;" title="Green"></div>
+                    <div class="color-option" data-color="#FFF9C4" style="background-color: #FFF9C4;" title="Yellow"></div>
+                    <div class="color-option" data-color="#BBDEFB" style="background-color: #BBDEFB;" title="Blue"></div>
+                    <div class="color-option" data-color="#D1C4E9" style="background-color: #D1C4E9;" title="Purple"></div>
+                    <div class="color-option" data-color="#FFE0B2" style="background-color: #FFE0B2;" title="Orange"></div>
+                    <div class="color-option" data-color="#B2DFDB" style="background-color: #B2DFDB;" title="Teal"></div>
+                    <div class="color-option" data-color="#F8BBD0" style="background-color: #F8BBD0;" title="Pink"></div>
+                </div>
+                <input type="hidden" id="colorTaskId">
+                <input type="hidden" id="selectedColor" value="">
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-button" id="cancelColor">Cancel</button>
+                <button class="save-button" id="saveColor">Apply Color</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Task Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content" style="width: 90%; max-width: 700px;">
+            <div class="modal-header">
+                <h2>Task Report</h2>
+                <span class="close-button" id="closeReportModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="reportContent" style="margin-bottom: 20px; white-space: pre-wrap; border: 1px solid #ddd; padding: 15px; border-radius: 5px; max-height: 500px; overflow-y: auto;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" id="copyReport" style="background-color: #2196F3; color: white;">Copy to Clipboard</button>
+                <button class="cancel-button" id="closeReport">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Import/Export Modal -->
+    <div id="importExportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Import/Export Tasks</h2>
+                <span class="close-button" id="closeImportExportModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; gap: 20px; flex-direction: column;">
+                    <div>
+                        <h3>Export Tasks</h3>
+                        <p>Download your tasks as a JSON file for backup:</p>
+                        <button id="exportTasksBtn" class="btn" style="background-color: #4caf50; color: white; padding: 10px 15px;">Export Tasks</button>
+                    </div>
+                    <div>
+                        <h3>Import Tasks</h3>
+                        <p>Import tasks from a previously exported JSON file:</p>
+                        <input type="file" id="importTasksInput" accept=".json" style="margin-bottom: 10px;">
+                        <button id="importTasksBtn" class="btn" style="background-color: #2196F3; color: white; padding: 10px 15px;">Import Tasks</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-button" id="closeImportExport">Close</button>
+            </div>
+        </div>
+	</div>	
+
+    
+    <!-- Category Color Picker Modal -->
+    <div id="categoryColorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Select Category Color</h2>
+                <span class="close-button" id="closeCategoryColorModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="color-options" id="categoryColorOptions">
+                    <div class="color-option" data-color="#F44336" style="background-color: #F44336;" title="Red"></div>
+                    <div class="color-option" data-color="#E91E63" style="background-color: #E91E63;" title="Pink"></div>
+                    <div class="color-option" data-color="#9C27B0" style="background-color: #9C27B0;" title="Purple"></div>
+                    <div class="color-option" data-color="#673AB7" style="background-color: #673AB7;" title="Deep Purple"></div>
+                    <div class="color-option" data-color="#3F51B5" style="background-color: #3F51B5;" title="Indigo"></div>
+                    <div class="color-option" data-color="#2196F3" style="background-color: #2196F3;" title="Blue"></div>
+                    <div class="color-option" data-color="#03A9F4" style="background-color: #03A9F4;" title="Light Blue"></div>
+                    <div class="color-option" data-color="#00BCD4" style="background-color: #00BCD4;" title="Cyan"></div>
+                    <div class="color-option" data-color="#009688" style="background-color: #009688;" title="Teal"></div>
+                    <div class="color-option" data-color="#4CAF50" style="background-color: #4CAF50;" title="Green"></div>
+                    <div class="color-option" data-color="#8BC34A" style="background-color: #8BC34A;" title="Light Green"></div>
+                    <div class="color-option" data-color="#CDDC39" style="background-color: #CDDC39;" title="Lime"></div>
+                    <div class="color-option" data-color="#FFEB3B" style="background-color: #FFEB3B;" title="Yellow"></div>
+                    <div class="color-option" data-color="#FFC107" style="background-color: #FFC107;" title="Amber"></div>
+                    <div class="color-option" data-color="#FF9800" style="background-color: #FF9800;" title="Orange"></div>
+                    <div class="color-option" data-color="#FF5722" style="background-color: #FF5722;" title="Deep Orange"></div>
+                    <div class="color-option" data-color="#795548" style="background-color: #795548;" title="Brown"></div>
+                    <div class="color-option" data-color="#607D8B" style="background-color: #607D8B;" title="Blue Grey"></div>
+                </div>
+                <input type="hidden" id="categoryColorPickerTarget" value="">
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-button" id="cancelCategoryColor">Cancel</button>
+                <button class="save-button" id="saveCategoryColor">Select Color</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>    
