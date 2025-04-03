@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            color: #333;
+            transition: background-color 0.3s, color 0.3s; /* Smooth dark mode transition */
+        }
+        header {
+            background-color: #f5f5f5;
+            padding: 0.8rem 1rem; /* Slightly adjusted padding */
+            border-bottom: 1px solid #ddd;
+            display: flex; /* Enable flexbox for layout */
+            justify-content: space-between; /* Space between title and buttons */
+            align-items: center; /* Vertically align items */
+            flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+            gap: 10px; /* Gap between title and button group */
+            transition: background-color 0.3s, border-bottom-color 0.3s;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.5em; /* Adjusted size */
+        }
+        .header-controls { /* Container for header buttons */
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden; /* Prevent container itself from scrolling */
+        }
+        .editor-panel, .preview-panel {
+            flex: 1; /* Share space equally */
+            padding: 1rem;
+            overflow: auto; /* Allow scrolling within panels */
+            box-sizing: border-box;
+            height: 100%; /* Ensure panels fill container height */
+        }
+        .editor-panel {
+            border-right: 1px solid #ddd;
+            display: flex; /* Use flexbox for vertical layout */
+            flex-direction: column; /* Stack toolbar and textarea */
+            transition: border-right-color 0.3s;
+        }
+        .preview-panel {
+             /* No border initially */
+        }
+        #editor {
+            width: 100%;
+            flex-grow: 1; /* Allow textarea to fill remaining space */
+            padding: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: none;
+            box-sizing: border-box; /* Include padding/border in size */
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+        #preview {
+            padding: 10px;
+            height: 100%; /* Try to fill panel */
+            box-sizing: border-box;
+        }
+        .editor-toolbar { /* Specific toolbar for editor */
+            margin-bottom: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        button, .file-label { /* Common style for buttons and label */
+            padding: 8px 12px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-align: center;
+            white-space: nowrap; /* Prevent wrapping */
+            transition: background-color 0.2s;
+        }
+        button:hover, .file-label:hover {
+             opacity: 0.9; /* Slight hover effect */
+        }
+        /* Specific button colors */
+        #render-btn, #clear-btn { background-color: #6c757d; } /* Grey */
+        #render-btn:hover, #clear-btn:hover { background-color: #5a6268; }
+
+        .file-label { background-color: #007bff; } /* Blue */
+        .file-label:hover { background-color: #0056b3; }
+
+        #dark-mode-btn { background-color: #343a40; } /* Dark Grey */
+        #dark-mode-btn:hover { background-color: #23272b; }
+
+        #toggle-preview-btn { background-color: #28a745; } /* Green */
+        #toggle-preview-btn:hover { background-color: #218838; }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Markdown styling (Existing styles largely okay) */
+        #preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6 { margin-top: 24px; margin-bottom: 16px; font-weight: 600; line-height: 1.25; }
+        #preview h1 { font-size: 2em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; transition: border-bottom-color 0.3s; }
+        #preview h2 { font-size: 1.5em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; transition: border-bottom-color 0.3s; }
+        #preview h3 { font-size: 1.25em; }
+        #preview p { margin-top: 0; margin-bottom: 16px; }
+        #preview blockquote { padding: 0 1em; color: #6a737d; border-left: 0.25em solid #dfe2e5; margin: 0 0 16px 0; transition: color 0.3s, border-left-color 0.3s; }
+        #preview ul, #preview ol { padding-left: 2em; margin-top: 0; margin-bottom: 16px; }
+        #preview code { padding: 0.2em 0.4em; margin: 0; font-size: 85%; background-color: rgba(27,31,35,0.05); border-radius: 3px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; transition: background-color 0.3s; }
+        #preview pre {
+            padding: 16px;
+            overflow: auto; /* Keep scrollbar for overflow if wrapping fails */
+            font-size: 85%;
+            line-height: 1.45;
+            background-color: #f6f8fa;
+            border-radius: 3px;
+            margin-top: 0;
+            margin-bottom: 16px;
+            /* --- FIX FOR PROBLEM 1 --- */
+            white-space: pre-wrap;   /* Wrap lines */
+            word-break: break-word;  /* Break words if necessary */
+            /* ------------------------- */
+            transition: background-color 0.3s;
+        }
+        #preview pre code { background-color: transparent; padding: 0; font-size: 1em; /* Inherit size from pre */ } /* Ensure code inside pre doesn't have its own background */
+        #preview table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
+        #preview table th, #preview table td { padding: 6px 13px; border: 1px solid #dfe2e5; transition: border-color 0.3s; }
+        #preview table tr { background-color: #fff; border-top: 1px solid #c6cbd1; transition: background-color 0.3s, border-top-color 0.3s; }
+        #preview table tr:nth-child(2n) { background-color: #f6f8fa; transition: background-color 0.3s; }
+        #preview img { max-width: 100%; }
+        #preview a { color: #0366d6; text-decoration: none; transition: color 0.3s; }
+        #preview a:hover { text-decoration: underline; }
+
+        /* --- FULLSCREEN PREVIEW STYLES --- */
+        .container.preview-only .editor-panel {
+            display: none; /* Hide editor */
+        }
+        .container.preview-only .preview-panel {
+            border-left: none; /* Remove divider border when editor is hidden */
+        }
+        /* -------------------------------- */
+
+
+        /* --- DARK MODE STYLES --- */
+        body.dark-mode { background-color: #1e1e1e; color: #e0e0e0; }
+        body.dark-mode header { background-color: #2d2d2d; border-bottom-color: #444; }
+        body.dark-mode .editor-panel { border-right-color: #444; }
+        body.dark-mode #editor { background-color: #2d2d2d; color: #e0e0e0; border-color: #444; }
+        body.dark-mode #preview { /* Preview panel itself has no background, inherits from body */ }
+        body.dark-mode #preview h1, body.dark-mode #preview h2 { border-bottom-color: #444; }
+        body.dark-mode #preview blockquote { color: #a0a0a0; border-left-color: #444; }
+        body.dark-mode #preview code { background-color: rgba(255,255,255,0.1); }
+        body.dark-mode #preview pre { background-color: #2d2d2d; }
+        body.dark-mode #preview pre code { background-color: transparent; }
+        body.dark-mode #preview table tr { background-color: #2d2d2d; border-top-color: #444; }
+        body.dark-mode #preview table tr:nth-child(2n) { background-color: #3d3d3d; }
+        body.dark-mode #preview table th, body.dark-mode #preview table td { border-color: #444; }
+        body.dark-mode #preview a { color: #58a6ff; }
+
+        /* Ensure dark mode highlightjs theme is applied if needed */
+        /* Usually highlight.js detects dark themes, but you might force one */
+        /* body.dark-mode .hljs { background: #2d2d2d; color: #ccc; } */
+        /* Link a dark highlight.js theme instead if github.min.css isn't sufficient */
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Markdown Viewer</h1>
+        <div class="header-controls"> <!-- Group for header buttons -->
+            <input type="file" id="file-input" accept=".md, .markdown, .txt">
+            <label for="file-input" class="file-label">Load File</label>
+            <button id="toggle-preview-btn">Preview Only</button>
+            <button id="dark-mode-btn">Toggle Dark Mode</button>
+        </div>
+    </header>
+    <div class="container" id="main-container"> <!-- Added ID for easier selection -->
+        <div class="editor-panel">
+            <div class="editor-toolbar"> <!-- Toolbar specific to editor -->
+                <button id="render-btn">Render</button> <!-- Kept for explicit render -->
+                <button id="clear-btn">Clear</button>
+            </div>
+            <textarea id="editor" placeholder="Enter your Markdown here..."></textarea>
+        </div>
+        <div class="preview-panel">
+            <div id="preview"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const editor = document.getElementById('editor');
+            const preview = document.getElementById('preview');
+            const renderBtn = document.getElementById('render-btn');
+            const fileInput = document.getElementById('file-input');
+            const darkModeBtn = document.getElementById('dark-mode-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const togglePreviewBtn = document.getElementById('toggle-preview-btn'); // New button
+            const mainContainer = document.getElementById('main-container'); // Container element
+
+            // Set up marked options
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                },
+                breaks: true,
+                gfm: true
+            });
+
+            // Initialize with sample markdown (or keep previous one)
+            const initialMarkdown = `# Welcome to Markdown Viewer
+... (rest of your sample markdown) ...
+## Long Line Example
+
+\`\`\`
+This is a very long line inside a code block that should now wrap correctly instead of causing horizontal scrolling. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent vitae eros eget tellus tristique bibendum. Donec rutrum sed sem quis venenatis. Proin viverra risus a eros volutpat tempor. Cras et est et nibh gravida auctor.
+\`\`\`
+`;
+            if (!editor.value) { // Only set initial if empty (e.g. on first load)
+                 editor.value = initialMarkdown;
+            }
+            renderMarkdown(); // Initial render
+
+            // Event listeners
+            renderBtn.addEventListener('click', renderMarkdown);
+            editor.addEventListener('input', renderMarkdown); // Live preview
+
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    editor.value = e.target.result;
+                    renderMarkdown();
+                    // Optional: If in preview-only mode, maybe force focus back?
+                };
+                reader.readAsText(file);
+                // Reset file input to allow loading the same file again
+                e.target.value = null;
+            });
+
+            darkModeBtn.addEventListener('click', function() {
+                document.body.classList.toggle('dark-mode');
+                // Optionally save preference to localStorage
+            });
+
+            clearBtn.addEventListener('click', function() {
+                editor.value = '';
+                preview.innerHTML = '';
+            });
+
+            // --- FULLSCREEN PREVIEW LOGIC ---
+            togglePreviewBtn.addEventListener('click', function() {
+                mainContainer.classList.toggle('preview-only');
+                if (mainContainer.classList.contains('preview-only')) {
+                    togglePreviewBtn.textContent = 'Show Editor';
+                } else {
+                    togglePreviewBtn.textContent = 'Preview Only';
+                }
+            });
+            // ---------------------------------
+
+            function renderMarkdown() {
+                try {
+                    const markdownText = editor.value;
+                    const html = marked.parse(markdownText);
+                    preview.innerHTML = html;
+
+                    // Re-apply syntax highlighting after rendering
+                    // Use setTimeout to ensure DOM is updated before highlighting
+                    setTimeout(() => {
+                        preview.querySelectorAll('pre code').forEach((block) => {
+                            // Check if already highlighted to avoid double processing
+                            if (!block.classList.contains('hljs')) {
+                                hljs.highlightElement(block);
+                            }
+                        });
+                    }, 0);
+
+                } catch (error) {
+                    // Display parsing errors in the preview area for feedback
+                    preview.innerHTML = `<div style="color: red; font-weight: bold;">Error parsing Markdown:</div><pre>${error.message}</pre>`;
+                    console.error("Markdown Parsing Error:", error);
+                }
+            }
+
+            // Optional: Load dark mode preference on startup
+            // if (localStorage.getItem('darkMode') === 'enabled') {
+            //    document.body.classList.add('dark-mode');
+            // }
+        });
+    </script>
+</body>
+</html>
