@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Wizard Standalone Example V5 (Refined AI Instructions)</title>
+    <style>
+        /* CSS remains the same as V3 (Reinstated) */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .wizard-container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 700px;
+            margin: auto;
+        }
+        .wizard-step {
+            display: none; /* Hide all steps initially */
+            border-top: 1px solid #eee;
+            margin-top: 20px;
+            padding-top: 20px;
+        }
+        .wizard-step.active {
+            display: block; /* Show active step */
+        }
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            box-sizing: border-box; /* Include padding in width */
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: Consolas, Monaco, monospace;
+        }
+        textarea#aiPromptDisplay {
+            background-color: #ecf0f1;
+            font-size: 0.85em;
+            min-height: 200px;
+        }
+         /* Explanation Display Area */
+         #aiExplanationDisplay {
+             background-color: #f0f0f0;
+             border: 1px solid #ccc;
+             padding: 10px;
+             border-radius: 4px;
+             min-height: 50px;
+             font-size: 0.9em;
+             white-space: pre-wrap; /* Preserve formatting */
+             margin-bottom: 15px; /* Space before code area */
+             color: #333;
+         }
+         #aiExplanationDisplay.placeholder {
+             color: #777;
+             font-style: italic;
+         }
+
+        textarea#pastedScriptCode {
+             background-color: #e8f6fd; /* Light blue bg for pasting */
+             font-size: 0.9em;
+             min-height: 150px;
+        }
+
+        button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s ease;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        button.primary { background-color: #3498db; color: white; }
+        button.primary:hover:not(:disabled) { background-color: #2980b9; }
+        button.secondary { background-color: #95a5a6; color: white; }
+        button.secondary:hover:not(:disabled) { background-color: #7f8c8d; }
+        button.subtle { background-color: #ecf0f1; color: #34495e; border: 1px solid #bdc3c7;}
+        button.subtle:hover:not(:disabled) { background-color: #bdc3c7; }
+
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+         .button-group .right-buttons {
+             margin-left: auto; /* Push right buttons to the right */
+         }
+        .prompt-instructions {
+            font-size: 0.85em;
+            color: #555;
+            background-color: #f8f9f9;
+            padding: 8px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .validation-error {
+             color: #e74c3c;
+             font-size: 0.8em;
+             margin-top: -10px;
+             margin-bottom: 10px;
+             display: block;
+        }
+        .hidden { display: none; }
+         .warning-message {
+             margin-top: 20px; /* More space above warning */
+             margin-bottom: 15px;
+             padding: 10px;
+             background-color: #fcf8e3;
+             border: 1px solid #faebcc;
+             border-radius: 4px;
+             font-size: 0.9em;
+             color: #8a6d3b;
+         }
+         .warning-message strong { color: #c0392b; } /* Make warning stronger */
+    </style>
+</head>
+<body>
+
+<div class="wizard-container">
+    <h1>Script Wizard</h1>
+    <p>Create or edit automation scripts using AI assistance.</p>
+    <button id="editExampleBtn" class="subtle">Load Example Script for Editing</button>
+
+    <!-- Step 1: Define Logic -->
+    <div id="step1" class="wizard-step active">
+        <h2>Step 1: Define Script Logic</h2>
+        <input type="hidden" id="originalScriptName" value=""> <!-- For tracking during edit -->
+        <div>
+            <label for="scriptName">Script Name:</label>
+            <input type="text" id="scriptName" placeholder="Enter a unique name for your script">
+            <span id="scriptNameError" class="validation-error hidden">Script name is required and must be unique (simulated check).</span>
+        </div>
+        <div>
+            <label for="scriptDescription">Describe Script Logic (in plain English):</label>
+            <textarea id="scriptDescription" rows="6" placeholder="Example: Send 'Reset MCU', wait 500ms for 'ACK Signal' description, if received send 'Query Status', otherwise log an error and stop."></textarea>
+             <span id="scriptDescriptionError" class="validation-error hidden">Script description is required.</span>
+        </div>
+        <div class="button-group">
+             <span class="left-buttons">
+                 <button id="cancelBtn1" class="secondary">Cancel</button>
+             </span>
+             <span class="right-buttons">
+                <button id="goToStep2Btn" class="primary">Next: Generate Prompt</button>
+             </span>
+        </div>
+    </div>
+
+    <!-- Step 2: Generate & Review AI Prompt -->
+    <div id="step2" class="wizard-step">
+        <h2>Step 2: Generate & Review AI Prompt</h2>
+        <div class="prompt-instructions">
+            Copy the prompt below and paste it into your preferred AI tool (e.g., ChatGPT, Claude). Then, paste the AI's *single code block response* (which includes code and the final explanation comment) back into the next step.
+        </div>
+        <div>
+            <label for="aiPromptDisplay">Generated AI Prompt:</label>
+            <textarea id="aiPromptDisplay" readonly></textarea>
+        </div>
+        <div class="button-group">
+            <span class="left-buttons">
+                <button id="backToStep1Btn" class="secondary">Back</button>
+                <button id="copyPromptBtn" class="subtle">Copy Prompt</button>
+            </span>
+            <span class="right-buttons">
+                 <button id="goToStep3Btn" class="primary">Next: Paste Code</button>
+            </span>
+        </div>
+    </div>
+
+    <!-- Step 3: Paste, Review Explanation, & Save Code -->
+    <div id="step3" class="wizard-step">
+        <h2>Step 3: Paste, Review Explanation, & Save Code</h2>
+
+        <div>
+            <label for="aiExplanationDisplay">AI's Explanation of Script:</label>
+            <div id="aiExplanationDisplay" class="placeholder">(Explanation will appear here after pasting code containing the explanation comment block)</div>
+        </div>
+
+        <div>
+            <label for="pastedScriptCode">Paste Entire Generated Response Here (Code Block Only):</label>
+            <textarea id="pastedScriptCode" placeholder="Paste the JavaScript code AND explanation comment provided by the AI here..."></textarea>
+            <span id="pastedCodeError" class="validation-error hidden">Pasted code cannot be empty.</span>
+        </div>
+
+         <div class="warning-message">
+            <strong>Security Warning:</strong> Review the code pasted above carefully before saving and running. Code from external sources, including AI, may have unintended consequences or security risks. Ensure it only uses the expected API calls. Verify the AI's explanation matches the code's actions.
+        </div>
+
+        <div class="button-group">
+            <span class="left-buttons">
+                 <button id="backToStep2Btn" class="secondary">Back</button>
+                 <button id="cancelBtn3" class="secondary">Cancel</button>
+             </span>
+             <span class="right-buttons">
+                 <button id="saveScriptBtn" class="primary">Save Script</button>
+            </span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Dummy Data (Simulate Main App State) ---
+    const DUMMY_STATE = {
+        txCommands: [
+            { name: "Reset MCU", hex: "01 FF 00 EE", description: "Sends the standard reset sequence." },
+            { name: "Query Status", hex: "02 1A 00 E3", description: "Requests the device's status." },
+            { name: "Set LED Red", hex: "A0 01 FF 5E", description: "" }
+        ],
+        rxDefinitions: {
+            commandBytePosition: 1,
+            commandMap: {
+                "41": "ACK Signal",
+                "4E": "NACK / Error",
+                "5A": "Device Status Resp",
+                "D1": "Temperature Reading"
+            }
+        },
+         existingScripts: [ // Simulate scripts already saved in the main app
+             { name: "Old Handshake", description: "Does old stuff", code: "log('old code');" }
+         ]
+    };
+
+    // --- Wizard State ---
+    let currentStep = 1;
+    let wizardData = {
+        originalScriptName: "", // Store name when editing
+        scriptName: "",
+        scriptDescription: "",
+        pastedCode: ""
+    };
+
+    // --- DOM Elements ---
+    const steps = {
+        1: document.getElementById('step1'),
+        2: document.getElementById('step2'),
+        3: document.getElementById('step3')
+    };
+    const scriptNameInput = document.getElementById('scriptName');
+    const scriptDescriptionInput = document.getElementById('scriptDescription');
+    const aiPromptDisplay = document.getElementById('aiPromptDisplay');
+    const pastedScriptCodeInput = document.getElementById('pastedScriptCode');
+    const originalScriptNameInput = document.getElementById('originalScriptName');
+    const aiExplanationDisplay = document.getElementById('aiExplanationDisplay');
+
+    // Error spans
+    const scriptNameError = document.getElementById('scriptNameError');
+    const scriptDescriptionError = document.getElementById('scriptDescriptionError');
+    const pastedCodeError = document.getElementById('pastedCodeError');
+
+    // Regex for explanation extraction (looks for the specific block)
+    const explanationRegex = /\/\*\*\s*Script Explanation:\s*([\s\S]*?)\*\//;
+
+
+    // --- Functions ---
+    function showStep(stepNumber) {
+        Object.values(steps).forEach(step => step.classList.remove('active'));
+        if (steps[stepNumber]) {
+            steps[stepNumber].classList.add('active');
+            currentStep = stepNumber;
+            // If showing step 3, try to parse explanation from existing code
+            if (stepNumber === 3) {
+                 extractAndDisplayExplanation(pastedScriptCodeInput.value);
+            }
+        }
+    }
+
+    function clearValidationErrors() {
+         scriptNameError.classList.add('hidden');
+         scriptDescriptionError.classList.add('hidden');
+         pastedCodeError.classList.add('hidden');
+         scriptNameInput.classList.remove('invalid');
+         scriptDescriptionInput.classList.remove('invalid');
+         pastedScriptCodeInput.classList.remove('invalid');
+    }
+
+    function validateStep1() {
+        clearValidationErrors();
+        let isValid = true;
+        const currentName = scriptNameInput.value.trim();
+        const isEditing = !!originalScriptNameInput.value;
+        const originalName = originalScriptNameInput.value;
+
+        if (!currentName) {
+            scriptNameError.textContent = "Script name is required.";
+            scriptNameError.classList.remove('hidden');
+            scriptNameInput.classList.add('invalid');
+            isValid = false;
+        } else {
+             // Simulate uniqueness check
+             const nameExists = DUMMY_STATE.existingScripts.some(s => s.name === currentName);
+             if (nameExists && (!isEditing || currentName !== originalName)) {
+                scriptNameError.textContent = "Script name must be unique (simulated check).";
+                scriptNameError.classList.remove('hidden');
+                scriptNameInput.classList.add('invalid');
+                isValid = false;
+             }
+        }
+
+        if (!scriptDescriptionInput.value.trim()) {
+            scriptDescriptionError.classList.remove('hidden');
+            scriptDescriptionInput.classList.add('invalid');
+            isValid = false;
+        }
+        return isValid;
+    }
+
+     function validateStep3() {
+        clearValidationErrors();
+        let isValid = true;
+        if (!pastedScriptCodeInput.value.trim()) {
+            pastedCodeError.classList.remove('hidden');
+            pastedScriptCodeInput.classList.add('invalid');
+            isValid = false;
+        }
+         // Add check for name again, in case user went back and cleared it
+         if (!scriptNameInput.value.trim()) {
+             // Show error on step 1's input even if step 1 is hidden
+             scriptNameError.textContent = "Script name is required (cannot be cleared).";
+             scriptNameError.classList.remove('hidden');
+             scriptNameInput.classList.add('invalid');
+             isValid = false;
+             // Maybe force user back to step 1? Or just prevent saving.
+         }
+
+        return isValid;
+    }
+
+
+    function generatePrompt() {
+        wizardData.scriptName = scriptNameInput.value.trim();
+        wizardData.scriptDescription = scriptDescriptionInput.value.trim();
+
+        const promptLines = [];
+        promptLines.push("Objective: Generate a JavaScript code snippet for the Web Serial Terminal's scripting feature based on the user's request below.");
+        promptLines.push("\nContext: The script will run in a browser environment with access to a predefined asynchronous API to interact with a connected serial device.");
+
+        promptLines.push("\nAvailable Scripting API Functions (use `await` for async functions):");
+        promptLines.push("- `log(message: string)`: Logs a message to the terminal display.");
+        promptLines.push("- `await sleep(milliseconds: number): Promise<void>`: Pauses script execution.");
+        promptLines.push("- `await sendCommand(commandName: string): Promise<boolean>`: Sends a predefined TX command by its name. Returns true on successful send attempt, false/throws on error.");
+        promptLines.push("- `await sendHex(hexString: string): Promise<boolean>`: Sends raw hex data (e.g., 'AA BB 03'). Returns true/false.");
+        promptLines.push("- `await sendAscii(asciiString: string): Promise<boolean>`: Sends an ASCII string. Returns true/false.");
+        promptLines.push("- `await waitForData(options: object): Promise<object | null>`: Waits for incoming data matching criteria. Returns received data object `{ data: Uint8Array, text: string, hex: string, description: string? }` or `null` on timeout.");
+        promptLines.push("  - `options`: `{ pattern?: string | RegExp, timeout: number (ms), format?: 'ascii' | 'hex' | 'description' | 'raw' }` (Default timeout 5000ms. `pattern` matches against specified format. `description` matches mapped RX description).");
+        promptLines.push("- `getCommands(): object[]`: Returns read-only array of available TX commands: `[{ name, hex, description }, ...]`. ");
+        promptLines.push("- `getRxDefinitions(): object`: Returns read-only RX mapping: `{ commandBytePosition: number, commandMap: { 'HEX': description, ... } }`.");
+
+        promptLines.push("\nCurrent Project Context (Simulated):");
+        promptLines.push(" - TX Commands:");
+        if (DUMMY_STATE.txCommands.length > 0) {
+            DUMMY_STATE.txCommands.forEach(cmd => {
+                promptLines.push(`   - Name: "${cmd.name}", Hex: "${cmd.hex}"${cmd.description ? `, Desc: "${cmd.description}"` : ''}`);
+            });
+        } else {
+            promptLines.push("   (No TX commands defined)");
+        }
+        promptLines.push(" - RX Definitions:");
+        promptLines.push(`   - Command Byte Index: ${DUMMY_STATE.rxDefinitions.commandBytePosition}`);
+        const rxMapEntries = Object.entries(DUMMY_STATE.rxDefinitions.commandMap);
+         if (rxMapEntries.length > 0) {
+             rxMapEntries.forEach(([hex, desc]) => {
+                 promptLines.push(`   - Map: Hex 0x${hex} => "${desc}"`);
+             });
+         } else {
+             promptLines.push("   (No RX command mappings defined)");
+         }
+        // promptLines.push(`   - Delimiter: ${this.state.rxUseDelimiter ? `Enabled, Hex: "${this.state.rxDelimiterHex || '(None)'}"` : 'Disabled'}`); // Add if needed
+
+
+        promptLines.push("\nUser's Script Request:");
+        promptLines.push("```text");
+        promptLines.push(wizardData.scriptDescription);
+        promptLines.push("```");
+
+        // --- UPDATED AI INSTRUCTIONS ---
+        promptLines.push("\nInstructions for AI:");
+        promptLines.push("- Generate a single JavaScript code block (using ```javascript ... ``` fences).");
+        promptLines.push("- The code block should contain ONLY the script code based on the user's request above.");
+        promptLines.push("- Use ONLY the provided API functions.");
+        promptLines.push("- Use `await` correctly for all asynchronous API calls.");
+        promptLines.push("- Include basic error handling (e.g., check `waitForData` result, use try/catch).");
+        promptLines.push("- IMPORTANT: At the VERY END of the JavaScript code, but still INSIDE the SAME code block, include a block comment starting with `/** Script Explanation:` and ending with `*/`.");
+        promptLines.push("- Inside this final comment block, provide a simple, bullet-point explanation of what the script does, including rough timing (e.g., waits). Use plain language suitable for non-programmers. Example of the required final comment block:");
+        promptLines.push("  /** Script Explanation:\n   * - Sends the 'Reset MCU' command.\n   * - Waits up to 1 second for an 'ACK Signal'.\n   * - If ACK received, sends 'Query Status'.\n   * - If no ACK after 1 second, logs a timeout error.\n  */");
+        promptLines.push("- Your entire response must be ONLY this single code block containing both the script logic and the final explanation comment. Do NOT include any other text before the opening ```javascript or after the closing ```.");
+        // --- END UPDATED AI INSTRUCTIONS ---
+
+
+        aiPromptDisplay.value = promptLines.join('\n');
+    }
+
+    function copyPrompt() {
+        navigator.clipboard.writeText(aiPromptDisplay.value)
+            .then(() => {
+                alert("AI prompt copied to clipboard!");
+            })
+            .catch(err => {
+                console.error('Failed to copy prompt:', err);
+                alert("Error copying prompt. See console for details.");
+            });
+    }
+
+    function extractAndDisplayExplanation(code) {
+         const match = code.match(explanationRegex); // Regex finds the block anywhere
+         if (match && match[1]) {
+             let explanation = match[1].trim();
+             // Clean up potential leading asterisks from bullet points in the comment
+             explanation = explanation.replace(/^\s*\*\s?/gm, ''); // Remove leading * and optional space per line
+             aiExplanationDisplay.textContent = explanation.trim();
+             aiExplanationDisplay.classList.remove('placeholder');
+         } else {
+             aiExplanationDisplay.textContent = '(No explanation comment found in the standard format: /** Script Explanation: ... */)';
+             aiExplanationDisplay.classList.add('placeholder');
+         }
+    }
+
+
+    function saveScript() {
+        if (!validateStep3()) {
+             // Maybe jump back to the step with the error?
+             if (!pastedScriptCodeInput.value.trim()) showStep(3);
+             else if(!scriptNameInput.value.trim()) showStep(1);
+             return;
+        }
+
+        wizardData.pastedCode = pastedScriptCodeInput.value; // No trim on code
+        wizardData.scriptName = scriptNameInput.value.trim(); // Ensure name is up-to-date
+
+        // Simulate saving the script data
+        console.log("--- Script Saved (Simulated) ---");
+        console.log("Name:", wizardData.scriptName);
+        console.log("Description:", wizardData.scriptDescription);
+        console.log("Code (Includes Explanation Comment):\n", wizardData.pastedCode);
+        console.log("Original Name (if editing):", wizardData.originalScriptName || "N/A");
+        console.log("---------------------------------");
+
+        // In a real app, you'd update the main state here
+        // DUMMY_STATE.existingScripts.push/update({...});
+
+        alert(`Script "${wizardData.scriptName}" saved (Simulated - check console).`);
+        resetWizard(); // Go back to step 1 after saving
+    }
+
+     function cancelWizard() {
+         if (confirm("Are you sure you want to cancel? Any changes will be lost.")) {
+             resetWizard();
+         }
+     }
+
+    function resetWizard(isEditing = false) {
+         clearValidationErrors();
+         if (!isEditing) {
+            wizardData = { scriptName: "", scriptDescription: "", pastedCode: "", originalScriptName: "" };
+            scriptNameInput.value = "";
+            scriptDescriptionInput.value = "";
+            pastedScriptCodeInput.value = "";
+            originalScriptNameInput.value = "";
+            aiPromptDisplay.value = "";
+            aiExplanationDisplay.textContent = '(Explanation will appear here after pasting code containing the explanation comment block)'; // Reset explanation display
+            aiExplanationDisplay.classList.add('placeholder');
+         }
+         // If isEditing, the load function will set the values before showing step 1
+         showStep(1);
+    }
+
+     function loadScriptForEditing(scriptToEdit) {
+         resetWizard(true); // Reset state but flag as editing
+
+         wizardData.originalScriptName = scriptToEdit.name;
+         wizardData.scriptName = scriptToEdit.name;
+         wizardData.scriptDescription = scriptToEdit.description;
+         wizardData.pastedCode = scriptToEdit.code;
+
+         originalScriptNameInput.value = scriptToEdit.name; // Set hidden input
+         scriptNameInput.value = scriptToEdit.name;
+         scriptDescriptionInput.value = scriptToEdit.description;
+         pastedScriptCodeInput.value = scriptToEdit.code; // Pre-fill code area
+
+         // Attempt to parse explanation on load
+         extractAndDisplayExplanation(scriptToEdit.code);
+
+         console.log("Loaded script for editing:", scriptToEdit.name);
+         showStep(1); // Start wizard at step 1
+     }
+
+
+    // --- Event Listeners ---
+    document.getElementById('goToStep2Btn').addEventListener('click', () => {
+        if (validateStep1()) {
+            generatePrompt();
+            showStep(2);
+        }
+    });
+
+    document.getElementById('backToStep1Btn').addEventListener('click', () => {
+         // Store potentially edited prompt-related data if needed? Usually not.
+         showStep(1);
+    });
+
+     document.getElementById('copyPromptBtn').addEventListener('click', copyPrompt);
+
+
+    document.getElementById('goToStep3Btn').addEventListener('click', () => {
+         // No validation needed to go from 2 to 3
+        showStep(3);
+    });
+
+
+    document.getElementById('backToStep2Btn').addEventListener('click', () => {
+        wizardData.pastedCode = pastedScriptCodeInput.value; // Preserve pasted code if user goes back
+        showStep(2);
+    });
+
+    document.getElementById('saveScriptBtn').addEventListener('click', saveScript);
+
+     // Cancel Buttons
+     document.getElementById('cancelBtn1').addEventListener('click', cancelWizard);
+     // Step 2 doesn't really have a cancel, just Back or Next
+     document.getElementById('cancelBtn3').addEventListener('click', cancelWizard);
+
+     // Add listener to extract explanation when code is pasted/typed
+     pastedScriptCodeInput.addEventListener('input', () => {
+         extractAndDisplayExplanation(pastedScriptCodeInput.value);
+     });
+
+
+     // Edit Example Button
+     document.getElementById('editExampleBtn').addEventListener('click', () => {
+          const exampleScript = {
+              name: "Example Handshake",
+              description: "Send Reset MCU command.\nWait up to 1 second for the 'ACK Signal' description.\nIf ACK received, log success and send 'Query Status'.\nIf no ACK, log timeout error.",
+              // Example code WITH the explanation block AT THE END
+              code: `log('Starting Example Handshake...');
+try {
+  await sendCommand('Reset MCU');
+  let ack = await waitForData({ pattern: /ACK Signal/i, timeout: 1000, format: 'description' });
+  if (ack) {
+    log('Handshake ACK OK');
+    await sleep(100);
+    await sendCommand('Query Status');
+  } else {
+    log('ERROR: Handshake ACK timed out.');
+  }
+} catch(e) {
+  log('SCRIPT ERROR: ' + e.message);
+}
+log('Example Handshake finished.');
+/** Script Explanation:
+ * - Sends the 'Reset MCU' command to the device.
+ * - Waits for a maximum of 1000 milliseconds (1 second) for a response identified as 'ACK Signal'.
+ * - If the 'ACK Signal' is received within the time, it logs 'Handshake ACK OK'.
+ * - After receiving ACK, it pauses for 100 milliseconds.
+ * - Then, it sends the 'Query Status' command.
+ * - If the 'ACK Signal' is not received within 1 second, it logs a timeout error message.
+ * - Logs any unexpected errors during the process.
+ * - Logs when the script finishes.
+*/`
+          };
+          loadScriptForEditing(exampleScript);
+     });
+
+
+    // --- Init ---
+    showStep(1); // Start at step 1
+
+</script>
+
+</body>
+</html>
